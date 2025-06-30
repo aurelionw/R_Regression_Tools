@@ -1,65 +1,62 @@
-#' Einfache Lineare Regression mit grafischer Ausgabe
-#' 
-#' Die Funktion führt automatisch die Einfache Lineare Regression durch, überprüft die Residuen auf Normalverteilung 
-#' und plottet das Wahrscheinlichkeitsnetz für Normalverteilungen der Rsiduen,
-#' die Punkte mit Regressionslinie, Residuals vs Fitted-Values 
-#' 
-#' 
-#' 
-#' 
-#' @param df          ... Data Frame mit den Beobachtungen, die die Gruppierungsvariable enthält (typeof Data Frame)
-#' @param abhVar      ... Name der abh?ngigen Variable (typeof as.numeric)
-#' @param unabhVar    ... Name der unabhängigen Variable (typeof as.numeric)
-#' 
-#' 
-#' @return Eine Liste mit:
-#' \item{regression}{LIST, Ergebnis der Regression}
-#' \item{summary_regression}{LIST, zusammengefasstes Ergebnis der Regression}
-#' \item{shapiro_test}{LIST, Ergebnis des Shapiro-Tests}
-#' \item{residuals_normalverteilung}{BOOL, Normalverteilung der Residuen gegeben oder nicht}
-#' \item{plot_regression}{ggplot2-Objekt, Scatterplot mit Regressionslinie }
-#' \item{plot_qq_resid}{ggplot2-Objekt, Wahrscheinlichkeitsnetz der Residuen}
-#' \item{plot_resid_vs_fitted}{ggplot2-Objekt, Scatterplot der Residuen vs Fitted-Values}
-#' 
-#' 
+#' Simple Linear Regression with Visual Diagnostics
+#'
+#' This function performs a simple linear regression, automatically checks the residuals for normality,
+#' and generates several diagnostic plots, including a Q-Q plot of residuals, 
+#' a scatterplot with the regression line, and a residuals vs. fitted values plot.
+#'
+#'
+#' @param df         A data frame containing the observations. (type: data.frame)
+#' @param abhVar     The name of the dependent variable. (type: character, numeric column)
+#' @param unabhVar   The name of the independent variable. (type: character, numeric column)
+#'
+#'
+#' @return A list containing:
+#' \item{regression}{The linear model object (lm).}
+#' \item{summary_regression}{The summary of the regression (coefficients, R², etc.).}
+#' \item{shapiro_test}{Shapiro-Wilk test results for residuals.}
+#' \item{residuals_normalverteilung}{Boolean indicating whether residuals are normally distributed.}
+#' \item{plot_regression}{ggplot2 object: scatterplot with regression line.}
+#' \item{plot_qq_resid}{ggplot2 object: Q-Q plot of residuals.}
+#' \item{plot_resid_vs_fitted}{ggplot2 object: residuals vs. fitted values plot.}
+#'
+#'
 #' @author Aurelio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Hochschule Darmstadt
-#' 
-#' 
+#'
 #' @examples
-#' 
-#' 
+#' # aurelio_linearregression(df, "y", "x")
+#'
 #' @import ggplot2
-#' 
-#' 
+#'
 #' @export
+
 
 
 aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
   
-  # ------------ Lokales laden der Pakete ------------
+  # ------------ Load required packages locally ------------
   requireNamespace("ggplot2")
 
 
   
   
-  # ------------ EINGABE-TEST ------------
+  # ------------ Validate function inputs ------------
   
-  #Überprüfung, ob Data-Frame
+  #Check if 'df' is a data frame
   if (!is.data.frame(df)) {
     stop("Fehler: 'df' muss ein Data-Frame sein ")
   }
   
-  #?berpr?fung der abh?ngigen Variable
+  #Check if dependent variable is provided and exists in the data frame
   if (missing(abhVar) || !(abhVar %in% names(df))) {
     stop("Fehler: 'abhVar' fehlt oder existiert nicht im Data-Frame")
   }
   
-  #Überprüfung der unabhängiige Variable
+  Check if independent variable is provided and exists
   if (missing(unabhVar) || !(unabhVar %in% names(df))) {
     stop("Fehler: 'unabhVar' fehlt oder existiert nicht im Data-Frame")
   }
   
-  # Sicherstellen, dass abhVar numerisch ist
+  # Ensure dependent variable is numeric
   if (!is.numeric(df[[abhVar]])) {
     warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", abhVar))
     df[[abhVar]] <- as.numeric(as.character(df[[abhVar]]))
@@ -68,7 +65,7 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
     }
   }
   
-  # Sicherstellen, dass unabhVar numerisch ist
+  # Ensure independent variable is numeric
   if (!is.numeric(df[[unabhVar]])) {
     warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", unabhVar))
     df[[unabhVar]] <- as.numeric(as.character(df[[unabhVar]]))
@@ -80,7 +77,7 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
 
   
   
-  # ------------ ERGEBNISLISTE ERSTELLEN ------------
+  # ------------ Initialize result list ------------
   result <- list()
   result$regression <- NA
   result$summary_regression <- NA
@@ -96,7 +93,7 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
   
   
   
-  # ------------ REGRESSIONSMODELL AUFSTELLEN ------------ 
+  # ------------ Fit linear regression model ------------ 
   formel <- as.formula(paste(abhVar, '~', unabhVar))
   
   regression <- lm(formel, data = df)
@@ -104,16 +101,16 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
   result$summary_regression <- summary(regression)
   
   
-  # ------------ RESIDUUENANALYSE - SHAPIRO-WILK ------------
+  # ------------ Residual diagnostics: Shapiro-Wilk test ------------
   result$regression_residuals <- regression$residuals
   shapiro_wilk_result <- shapiro.test(regression$residuals)
   result$shapiro_test <- shapiro_wilk_result
   result$residuals_normalverteilung <- shapiro_wilk_result$p.value >= 0.05
   
   
-  # ------------ DESKRIPTIVE STATISTIK (PLOTS) ------------
+  # ------------ Visualization: regression diagnostics ------------
   
-  # Scatterplot mit Regressionslinie 
+  # Scatterplot with regression line 
   result$plot_regreession <- ggplot2::ggplot(df, ggplot2::aes(x = .data[[unabhVar]], y = .data[[abhVar]])) +
     ggplot2::geom_point() +
     ggplot2::geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -123,7 +120,7 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
                   ) + 
     ggplot2::theme_minimal()
   
-  # Wahrscheinlichleitz Netz der Residuen - Q-Q Plot
+  # Q-Q plot of residuals
   resid_df <- data.frame(resid = regression$residuals)
   result$plot_qq_resid <- ggplot2::ggplot(resid_df, ggplot2::aes(sample = resid)) + 
     ggplot2::stat_qq() +
@@ -134,7 +131,7 @@ aurelio_lineareregression <- function(df, unabhVar, abhVar ) {
     ggplot2::theme_minimal()
   
   
-  # Residuen vs. Fitted
+  # Residuals vs. fitted values plot
   plot_df <- data.frame(Fitted = regression$fitted.values, Residuals = regression$residuals )
   result$plot_resid_vs_fitted <- ggplot2::ggplot(plot_df, ggplot2::aes(x = Fitted, y = Residuals)) +
     ggplot2::geom_point() +
