@@ -1,53 +1,51 @@
-#' Einfache ANOVA mit grafischer Ausgabe
-#' 
-#' Die Funktion überprüft automatisch auf Normalverteilung und Varianzhomogenität 
-#' und wählt den richtigen Test aus. Es werden 3 Fälle betrachtet:
+#' Simple ANOVA Function with Automatic Test Selection and Visual Output
 #'
-#' Fall 1: Nicht normalverteilt                      -> Kruskal + DUNN
-#' Fall 2: Normalverteilt + Varianzhomogenit?t       -> ANOVA + Tukey HSD 
-#' Fall 3: Normalverteilt + Varianzinhomogenit?t     -> ANOVA + Games-Howell                      
+#' This function automatically performs a one-way analysis of variance (ANOVA) or Kruskal-Wallis test, depending on the results of normality and homogeneity tests.
+#' It supports the following decision logic:
 #' 
-#' Anschließend gibt die Funktion folgende Abbildungen aus:
-#' Fehlerbalkendiagramm
-#' Wahrscheinlichkeitsnetz
-#' Simultane 95%-Kis (nach Tukey, Dunn oder Games-Howell)
-#' ... (Erweiterbar)
+#' - **Case 1:** Non-normal distribution ⟶ Kruskal-Wallis test + Dunn post-hoc
+#' - **Case 2:** Normal distribution with equal variances ⟶ ANOVA + Tukey HSD
+#' - **Case 3:** Normal distribution with unequal variances ⟶ ANOVA + Games-Howell
 #' 
+#' The function also returns multiple publication-ready plots, including:
+#' - Q–Q plot of residuals
+#' - Grouped boxplot
+#' - Error bar plot (Mean ± SE)
+#' - Simultaneous confidence intervals (Tukey, Dunn, or Games-Howell)
 #' 
-#' 
-#' @param df          ... Data Frame mit den Beobachtungen, die die Gruppierungsvariable enthält (typeof Data Frame)
-#' @param abhVar      ... Name der abh?ngigen Variable (typeof String)
-#' @param gruppVar    ... Name der Gruppierungsvariable (typeof String)
-#' 
-#' 
-#' @return Eine Liste mit:
-#' \item{shapiro_test}{LIST, Ergebnis des Shapiro-Test}
-#' \item{normalverteilung}{BOOL, Normalverteilung gegeben oder nicht}
-#' \item{varianzhomogenität}{BOOL, Varianzhomogenität gegeben oder nicht (Levene)}
-#' \item{test}{CHARACTER, Name des durchgeführten Tests (Kruskal, ANOVA + varianzhomogen, ANOVA + varianzinhomogen)}
-#' \item{posthoc}{Name des Post-hoc-Tests (Dunn, Tukey HSD, Games-Howell)}
-#' \item{posthoc_ergebnisse}{LIST, Ergebnisse des Post-hoc-Tests}
-#' \item{plot_qq}{ggplot2-Objekt, grafische Darstellung der Quantile zweier statistischer Variablen}
-#' \item{plot_boxplot}{ggplot2-Objekt, grafische Darstellung als Boxplot}
-#' \item{plot_fehlerbalkendiagramm}{ggplot2-Objekt, grafische Darstellung von Mittelwerten mit den dazugehörigen Schätzintervall}
-#' \item{simultane95kis}{ggplot2-Objekt, grafische Darstellung der Konfidenzintervalle}
-#' 
-#' 
-#' @author Aurelio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Hochschule Darmstadt
-#' 
-#' 
+#' All tests and plots are executed automatically based on the data structure.
+#'
+#' @param df A data frame containing the observations and grouping variable.
+#' @param abhVar Name (character) of the dependent variable.
+#' @param gruppVar Name (character) of the grouping variable.
+#' @param conf.level Confidence level used for Tukey/Games-Howell intervals (default: 0.95).
+#'
+#' @return A list containing:
+#' \item{shapiro_test}{Result of the Shapiro-Wilk test.}
+#' \item{normalverteilung}{Boolean indicating whether residuals are normally distributed.}
+#' \item{varianzhomogenitaet}{Boolean indicating whether equal variances are present (Levene test).}
+#' \item{test}{Character string specifying which test was used ("Kruskal-Wallis", "ANOVA + varianzhomogen", "ANOVA + varianzinhomogen").}
+#' \item{posthoc}{Post-hoc test used ("Dunn", "Tukey HSD", "Games-Howell").}
+#' \item{posthoc_ergebnisse}{Result of the post-hoc analysis.}
+#' \item{plot_qq}{ggplot object: Q–Q plot of residuals.}
+#' \item{plot_boxplot}{ggplot object: Grouped boxplot of the dependent variable.}
+#' \item{plot_fehlerbalkendiagramm}{ggplot object: Error bar plot (Mean ± SE).}
+#' \item{plot_simultane95kis}{ggplot object: 95% simultaneous confidence intervals.}
+#'
+#' @author Aurélio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Hochschule Darmstadt
+#'
 #' @examples
-#' 
-#' 
-#' @import ggplot2 dplyr userfriendlyscience FSA ggpubr car  
-#' 
-#' 
+#' # Example usage:
+#' # result <- aurelio_einfach_anova(df = my_data, abhVar = "score", gruppVar = "group")
+#'
+#' @import ggplot2 dplyr userfriendlyscience FSA ggpubr car
+#'
 #' @export
 
 
 aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   
-  # ------------ Lokales laden der Pakete ------------
+  # ------------ Load required packages locally ------------
   requireNamespace("ggplot2")
   requireNamespace("dplyr")
   requireNamespace("userfriendlyscience")
@@ -56,36 +54,35 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   requireNamespace("car")
   
 
-  # ------------ ?berpr?fung der einzelnen Einaben ------------
+  # ------------ validate function inputs ------------
   
-  #?berpr?fung von df
+  #Check if 'df' is a data frame
   if (!is.data.frame(df)) {
     stop("Fehler: 'df' muss ein Data-Frame sein ")
   }
   
-  #?berpr?fung der abh?ngigen Variable
+  #Check if dependent variable is provided and exists in the data frame
   if (missing(abhVar) || !(abhVar %in% names(df))) {
     stop("Fehler: 'abhVar' fehlt oder existiert nicht im Data-Frame")
   }
   
-  #?berpr?fung von gruppVar
-  #Existenz
+  #Check if grouping variable is provided and exists in the data frame
   if (missing(gruppVar) || !(gruppVar %in% names(df))) {
     stop("Fehler: 'gruppVar' fehlt oder existiert nicht im Data-Frame")
   }
   
-  #Gruppierbarkeit bzw. Tauglichkeitstest
+  # Check if grouping variable is a factor; convert if necessary
   if (!is.factor(df[[gruppVar]])) {
     warning("Hinweis: 'gruppVar' ist kein Faktor und wird automatisch in ein Faktor umgewandelt")
     df[[gruppVar]] <- as.factor(df[[gruppVar]])
   }
   
-  # Sicherstellen, dass abhängige Variable numerisch ist
+  # Ensure that the dependent variable is numeric; try to convert if not
   if (!is.numeric(df[[abhVar]])) {
     warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", abhVar))
     df[[abhVar]] <- as.numeric(as.character(df[[abhVar]]))
     
-    # Nochmals prüfen
+    # Re-check if conversion was successful
     if (any(is.na(df[[abhVar]]))) {
       stop(sprintf("Fehler: '%s' konnte nicht in numerisch umgewandelt werden. Enthält nicht-numerische Werte.", abhVar))
     }
@@ -94,7 +91,7 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   
   formel <- as.formula(paste(abhVar, "~", gruppVar)) 
   
-  # ------------ ERGEBNISLISTE ERSTELLEN ------------
+  # ------------ Initialize result list ------------
   result <- list()
   result$shapiro_test <- NA
   result$anova <- NA
@@ -113,20 +110,19 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   
   
   
-  #ANOVA-Modell erstellen
+  #Create ANOVA model
   anova_model <- aov(formel, data = df)
   result$anova <- anova_model
   
   
-  # ------------ Test auf Normalvertei?ung ------------
+  # ------------ Test for normality (Shapiro-Wilk) ------------
   
   #Shapiro-Wilk
   shapiro_wilk_result <- shapiro.test(resid(anova_model))
   result$shapiro_test <- shapiro_wilk_result
   result$normalverteilung <- shapiro_wilk_result$p.value >= 0.05
   
-  #Fall 1: nicht normalverteilt -> Kruskal + Dunn ABÄNDERN WEGEN PLOT
-  
+  #**Case 1:** Non-normal distribution ⟶ Kruskal-Wallis test + Dunn post-hoc
   if (!result$normalverteilung) {
     result$test <- "Kruskal-Wallis"
     result$ergebnisse <- kruskal.test(formel, data = df)
@@ -138,12 +134,13 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   
   
   if (result$normalverteilung == TRUE) {
-    # ------------ VARIANZHOMOGENITAET ÜBERPRÜFEN ------------
+
+    # ------------ Homogenity of variance (Levene-Test) ------------
     levene_result <- car:: leveneTest(formel, data = df)
     result$levene_test <- levene_result
     result$varianzhomogenitaet <- levene_result$`Pr(>F)`[1] >= 0.05
     
-    #  Fall 2: Normalverteilt + Varianzhomogenit?t -> ANOVA + Tukey HSD 
+     # Case 2: Normal + homogeneous variance -> ANOVA + Tukey HSD 
     if(result$varianzhomogenitaet) {
       result$test = "ANOVA + varianzhomogen"
       result$ergebnisse <- summary(anova_model)
@@ -153,7 +150,7 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
     }
     
     
-    # Fall 3: Normalverteilt + Varianzinhomogenit?t -> ANOVA + Games-Howell
+    # Case 3: Normal + heteroscedasticity -> ANOVA + Games-Howell
     if(!result$varianzhomogenitaet) {
       result$test = "ANOVA + varianzinhomogen"
       result$ergebnisse <- summary(anova_model)
@@ -168,9 +165,9 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   }
 
   
-  # ------------ DESKRIPTIVE STATISTIK (PLOTS) ------------
+  # ------------ Descriptive statistics and plots ------------
   
-  # Wahrscheinlichkeitsnetz Q-Q Plot (Data-Frame - resid(anova_model))
+ # Q-Q Plot of residuals to visualize normality
   result_df <- data.frame(resid = resid(anova_model))
   result$plot_qq <- ggplot2::ggplot(result_df, ggplot2::aes(sample = resid)) + 
     ggplot2::stat_qq() +
@@ -179,7 +176,7 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
          x = "Theoretische Quantile", y = "Residuen")
   
   
-  # Boxplot (Data-Frame)
+  # Boxplot of dependent variable across groups
   result$plot_boxplot <- ggplot2::ggplot(df, ggplot2::aes(x= .data[[gruppVar]], y = .data[[abhVar]])) +
     ggplot2::geom_boxplot(fill = "lightblue", color = "black") +
     ggplot2::labs(title = "Boxplot je Gruppe",
@@ -188,10 +185,10 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
   
   if (result$test == "Kruskal-Wallis") return(result)
   
-  # Fehlerbalkendiagramm (Tukey, Games-Howell)
+  # If Kruskal-Wallis was used, return result early (no CI plots)
   #if (result$test != "Kruskal-Wallis") {
     
-    # 1. Zusammenfassen: Mittelwert + SE pro Gruppe
+   # Mean ± SE Plot (error bars)
     summary_stats <- df %>%
       dplyr::group_by(.data[[gruppVar]]) %>%
       dplyr::summarise(
@@ -199,7 +196,6 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
         se = sd(.data[[abhVar]], na.rm = TRUE) / sqrt(dplyr::n())
       )
     
-    # 2. Dynamischer Titel mit sprintf()
     plot_title_se <- sprintf("Fehlerbalkendiagramm (Mean ± SE, %s)", result$posthoc)
     
     # 3. Plot erstellen
@@ -218,11 +214,10 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
 
   
   
-  # Simultane 95%-KIs nach (Tukey, Games-Howell)
-      # 1. Titel bauen
+  # Simultaneous 95% Confidence Intervals (Tukey or Games-Howell)
   plot_title_ci <- sprintf("Simultane 95%%-KIs (%s)", result$posthoc)
   
-  # 2. Daten vorbereiten
+  # Prepare data depending on post-hoc test
   if (result$posthoc == "Tukey HSD") {
     plot_df <- as.data.frame(result$posthoc_ergebnisse[[gruppVar]])
     plot_df$comparison <- rownames(plot_df)
@@ -233,7 +228,7 @@ aurelio_einfach_anova <- function(df, abhVar, gruppVar, conf.level = 0.95) {
     plot_df$comparison <- rownames(plot_df)
   }
   
-  # 3. Plot
+  # Create CI plot
   result$plot_simultane95kis <- ggplot2::ggplot(plot_df, ggplot2::aes(y = comparison, x = diff)) +
     ggplot2::geom_point(size = 3) +
     ggplot2::geom_errorbarh(ggplot2::aes(xmin = ci.lo, xmax = ci.hi), height = 0.2) +
