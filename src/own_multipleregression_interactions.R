@@ -1,45 +1,45 @@
-#' Multiple Lineare Regression mit Interaktionsterme und grafischer Ausgabe
+#' Multiple Linear Regression with Interaction Terms and Visual Diagnostics
 #'
-#' Diese Funktion führt eine multiple lineare Regression durch und erstellt verschiedene
-#' diagnostische Plots zur Beurteilung der Modellgüte. Dazu zählen u.a. die Residuenanalyse,
-#' die Untersuchung auf Homoskedastizität, Multikollinearität sowie Korrelationsanalysen.
+#' This function performs a multiple linear regression with interaction terms and provides various
+#' diagnostic plots to assess model quality. These include residual analysis, tests for homoscedasticity,
+#' multicollinearity checks, and correlation analyses.
 #'
-#' @param df                          ... Data Frame, der die Daten für die Analyse enthält.
-#' @param unabhVar_list               ... Charaktervektor mit den Namen der unabhängigen Variablen.
-#' @param abhVar                      ... Charakterstring mit dem Namen der abhängigen (Ziel-)Variable.
-#' @param signifikanzniveau_alpha     ... Signifikanzniveau für Hypothesentests (Default: 0.05)
+#' @param df                          A data frame containing the data for analysis.
+#' @param unabhVar_list               A character vector with the names of the independent variables, including interaction terms (e.g. "x1*x2").
+#' @param abhVar                      A character string indicating the dependent (target) variable.
+#' @param signifikanzniveau_alpha     Significance level for hypothesis testing (default: 0.05)
 #'
-#' @return Liste mit folgenden Elementen:
-#' \item{multilineare_regression}{Das Regressionsmodell als Objekt vom Typ "lm".}
-#' \item{summary_multilineare_regression}{Zusammenfassung des Regressionsmodells.}
-#' \item{multilineare_regression_residuals}{Residuen des Modells.}
-#' \item{shapiro_test}{Ergebnis des Shapiro-Wilk-Tests auf Normalverteilung der Residuen.}
-#' \item{multilineare_regression_residuals_normalverteilung}{Boolescher Wert, ob Normalverteilung angenommen werden kann.}
-#' \item{breusch_pagan_test}{Ergebnis des Breusch-Pagan-Tests auf Heteroskedastizität.}
-#' \item{homoskedazitaet}{Boolescher Wert, ob Homoskedastizität angenommen werden kann.}
-#' \item{korrelationsmatrix}{Korrelationsmatrix der unabhängigen Variablen.}
-#' \item{hohe_korrelation_name}{Vektor mit Namen stark korrelierter Variablenpaare (|r| > 0.8).}
-#' \item{multikollinearitaet}{Named numeric vector mit den berechneten Variance Inflation Factors (VIF) für jede unabhängige Variable.}
-#' \item{problematische_vif_variablen}{Character vector mit Namen der unabhängigen Variablen, deren VIF-Werte größer oder gleich 5 sind.}
-#' \item{vif_warnung}{Logical, TRUE wenn mindestens ein VIF-Wert größer oder gleich 10 ist (Hinweis auf ernsthafte Multikollinearität).}
-#' \item{plot_qq_resid}{Q-Q-Plot der Residuen.}
-#' \item{plot_resid_vs_fitted}{Plot: Residuen vs. Fitted Values.}
-#' \item{plot_korrelationsmatrix}{Plot der Korrelationsmatrix (ggcorrplot).}
-#' \item{plot_histogram_resid}{Histogramm der Residuen mit Dichtekurve.}
-#' \item{plot_scale_location}{Scale-Location-Plot.}
-#' \item{plot_influencePlot}{Influence Plot nach Cook's Distance.} Aus technischen Gründen nict automatisch angezeigt. Aufruf: \code{result\$plot_influencePlot()} in der Console
-#' \item{plot_vif}{Visualisierung der VIF-Werte zur Multikollinearitätsdiagnose.}
-#' \item{plot_interaktion_list}{Interaktionsplot als Facettenplot - mehrere Interaktionsplot}
-#' \item{plot_interaktion}{Interaktionsplot für den Fall, wir besitzen mindestens ein Faktor }
-#' \item{plot_johnson_neyman_list}{Interaktionsplot für den Fall, wir besitzem zwei stetige Variablen}
-#' \item{plot_konfint}{Konfidenzintervalle der Regressionskoeffizienten (1- alpha)%}
-#' \item{plot_interactions_faceted}
+#' @return A list with the following elements:
+#' \item{multilineare_regression}{The regression model object of type "lm".}
+#' \item{summary_multilineare_regression}{Summary of the regression model.}
+#' \item{multilineare_regression_residuals}{Residuals of the model.}
+#' \item{shapiro_test}{Result of the Shapiro-Wilk test for normality of residuals.}
+#' \item{multilineare_regression_residuals_normalverteilung}{Boolean indicating whether normality can be assumed.}
+#' \item{breusch_pagan_test}{Result of the Breusch-Pagan test for heteroskedasticity.}
+#' \item{homoskedazitaet}{Boolean indicating whether homoscedasticity can be assumed.}
+#' \item{korrelationsmatrix}{Correlation matrix of the independent variables.}
+#' \item{hohe_korrelation_name}{Character vector of highly correlated variable pairs (|r| > 0.8).}
+#' \item{multikollinearitaet}{Named numeric vector containing the calculated Variance Inflation Factors (VIFs).}
+#' \item{problematische_vif_variablen}{Names of variables with VIF values ≥ 5.}
+#' \item{vif_warnung}{Logical; TRUE if any VIF ≥ 10 (indicating serious multicollinearity).}
+#' \item{plot_qq_resid}{Q-Q plot of the residuals.}
+#' \item{plot_resid_vs_fitted}{Plot of residuals vs. fitted values.}
+#' \item{plot_korrelationsmatrix}{Correlation matrix plot (via ggcorrplot).}
+#' \item{plot_histogram_resid}{Histogram of residuals with density curve.}
+#' \item{plot_scale_location}{Scale-location (spread-level) plot.}
+#' \item{plot_influencePlot}{Cook's Distance influence plot. Not rendered by default – run \code{result\$plot_influencePlot()} manually in console.}
+#' \item{plot_vif}{Bar plot of VIF values to detect multicollinearity.}
+#' \item{plot_interaktion_list}{List of interaction plots for each interaction term.}
+#' \item{plot_interaktion}{Single interaction plot (if one interaction with a factor exists).}
+#' \item{plot_interactions_faceted}{Faceted interaction plot comparing multiple interactions.}
+#' \item{plot_johnson_neyman_list}{List of Johnson-Neyman plots for continuous-continuous interactions.}
+#' \item{plot_konfint}{Plot of confidence intervals for regression coefficients at (1 - alpha)%.}
 #'
 #' @author Aurelio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Hochschule Darmstadt
 #'
 #' @examples
 #' data <- read.csv2("election_data.csv")
-#' aurelio_multilineareregression(data, list("Growth", "Inflation"), "Vote")
+#' aurelio_multilineareregression(data, list("Growth", "Inflation", "Growth*Inflation"), "Vote")
 #'
 #' @import ggplot2
 #' @import ggcorrplot
@@ -48,6 +48,7 @@
 #' @import lmtest
 #'
 #' @export
+
 
 
 
