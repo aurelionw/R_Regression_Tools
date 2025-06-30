@@ -1,37 +1,36 @@
-#' Multiple Lineare Regression mit grafischer Ausgabe
+#' Multiple Linear Regression with Diagnostic Visualizations
 #'
-#' Diese Funktion führt eine multiple lineare Regression durch und erstellt verschiedene
-#' diagnostische Plots zur Beurteilung der Modellgüte. Dazu zählen u.a. die Residuenanalyse,
-#' die Untersuchung auf Homoskedastizität, Multikollinearität sowie Korrelationsanalysen.
+#' This function performs a multiple linear regression and generates several
+#' diagnostic plots to assess model quality. These include residual analysis,
+#' checks for homoscedasticity, multicollinearity, and correlation structure among predictors.
 #'
-#' @param df                          ... Data Frame, der die Daten für die Analyse enthält.
-#' @param unabhVar_list               ... Charaktervektor mit den Namen der unabhängigen Variablen.
-#' @param abhVar                      ... Charakterstring mit dem Namen der abhängigen (Ziel-)Variable.
-#' @param signifikanzniveau_alpha     ... Signifikanzniveau für Hypothesentests (Default: 0.05)
+#' @param df                      A data frame containing the input data.
+#' @param unabhVar_list           A character vector with the names of the independent variables.
+#' @param abhVar                  A character string with the name of the dependent (target) variable.
+#' @param signifikanzniveau_alpha Significance level for hypothesis tests (default: 0.05).
 #'
-#' @return Liste mit folgenden Elementen:
-#' \item{multilineare_regression}{Das Regressionsmodell als Objekt vom Typ "lm".}
-#' \item{summary_multilineare_regression}{Zusammenfassung des Regressionsmodells.}
-#' \item{multilineare_regression_residuals}{Residuen des Modells.}
-#' \item{shapiro_test}{Ergebnis des Shapiro-Wilk-Tests auf Normalverteilung der Residuen.}
-#' \item{multilineare_regression_residuals_normalverteilung}{Boolescher Wert, ob Normalverteilung angenommen werden kann.}
-#' \item{breusch_pagan_test}{Ergebnis des Breusch-Pagan-Tests auf Heteroskedastizität.}
-#' \item{homoskedazitaet}{Boolescher Wert, ob Homoskedastizität angenommen werden kann.}
-#' \item{korrelationsmatrix}{Korrelationsmatrix der unabhängigen Variablen.}
-#' \item{hohe_korrelation_name}{Vektor mit Namen stark korrelierter Variablenpaare (|r| > 0.8).}
-#' \item{multikollinearitaet}{Named numeric vector mit den berechneten Variance Inflation Factors (VIF) für jede unabhängige Variable.}
-#' \item{problematische_vif_variablen}{Character vector mit Namen der unabhängigen Variablen, deren VIF-Werte größer oder gleich 5 sind.}
-#' \item{vif_warnung}{Logical, TRUE wenn mindestens ein VIF-Wert größer oder gleich 10 ist (Hinweis auf ernsthafte Multikollinearität).}
-#' \item{plot_qq_resid}{Q-Q-Plot der Residuen.}
-#' \item{plot_resid_vs_fitted}{Plot: Residuen vs. Fitted Values.}
-#' \item{plot_korrelationsmatrix}{Plot der Korrelationsmatrix (ggcorrplot).}
-#' \item{plot_histogram_resid}{Histogramm der Residuen mit Dichtekurve.}
-#' \item{plot_scale_location}{Scale-Location-Plot.}
-#' \item{plot_influencePlot}{Influence Plot nach Cook's Distance.} Aus technischen Gründen nict automatisch angezeigt. Aufruf: \code{result\$plot_influencePlot()} in der Console
-#' \item{plot_vif}{Visualisierung der VIF-Werte zur Multikollinearitätsdiagnose.}
-#' 
+#' @return A list with the following elements:
+#' \item{multilineare_regression}{The fitted linear regression model (object of class \code{lm}).}
+#' \item{summary_multilineare_regression}{Summary of the regression model.}
+#' \item{multilineare_regression_residuals}{Residuals of the model.}
+#' \item{shapiro_test}{Shapiro-Wilk test for normality of residuals.}
+#' \item{multilineare_regression_residuals_normalverteilung}{Logical value indicating whether normality of residuals can be assumed.}
+#' \item{breusch_pagan_test}{Breusch-Pagan test for heteroskedasticity.}
+#' \item{homoskedazitaet}{Logical value indicating whether homoscedasticity can be assumed.}
+#' \item{korrelationsmatrix}{Correlation matrix of the independent variables.}
+#' \item{hohe_korrelation_name}{Vector of variable name pairs with high correlation (|r| > 0.8).}
+#' \item{multikollinearitaet}{Named numeric vector with the computed Variance Inflation Factors (VIFs) for each predictor.}
+#' \item{problematische_vif_variablen}{Character vector of predictors with VIF ≥ 5 (indicating problematic multicollinearity).}
+#' \item{vif_warnung}{Logical value, TRUE if any VIF ≥ 10 (indicating serious multicollinearity).}
+#' \item{plot_qq_resid}{Q-Q plot of residuals.}
+#' \item{plot_resid_vs_fitted}{Plot of residuals versus fitted values.}
+#' \item{plot_korrelationsmatrix}{Correlation matrix plot (from \code{ggcorrplot}).}
+#' \item{plot_histogram_resid}{Histogram of residuals with density curve.}
+#' \item{plot_scale_location}{Scale-Location plot (sqrt of standardized residuals vs. fitted values).}
+#' \item{plot_influencePlot}{Cook's Distance influence plot. Not shown automatically; call manually via \code{result\$plot_influencePlot()}.}
+#' \item{plot_vif}{Barplot showing VIF values to assess multicollinearity.}
 #'
-#' @author Aurelio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Hochschule Darmstadt
+#' @author Aurelio Nwamusse <aurelio.nwamusse@stud.h-da.de>, Darmstadt University of Applied Sciences
 #'
 #' @examples
 #' data <- read.csv2("election_data.csv")
@@ -46,6 +45,7 @@
 
 
 aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzniveau_alpha = 0.05) {
+  
   # ------------ LOKALES LADEN DER PAKETE ------------
   requireNamespace("ggplot2")
   requireNamespace("ggcorrplot")
