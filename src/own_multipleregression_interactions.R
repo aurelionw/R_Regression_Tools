@@ -52,7 +52,7 @@
 
 
 aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,abhVar, signifikanzniveau_alpha = 0.05) {
-  # ------------ LOKALES LADEN DER PAKETE ------------
+  # ------------ LOAD REQUIRED PACKAGES LOCALLY ------------
   requireNamespace("ggplot2")
   requireNamespace("ggcorrplot")
   requireNamespace("car")
@@ -61,7 +61,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  # ------------ HILFSFUNKTION: Basisvariablen extrahieren ------------
+  # ------------ HELPER FUNCTION: Extract base variables from formulas ------------
   extrahiere_basisvariablen <- function(varformeln) {
     clean_vars <- gsub("(log|scale|I)\\([^\\)]*\\)", "", varformeln) # Funktionen entfernen
     clean_vars <- gsub("[^[:alnum:]_]", " ", clean_vars)             # Sonderzeichen entfernen
@@ -72,13 +72,13 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  # ------------ EINGABE-TEST -------------
-  #Überprüfung, ob Data-Frame
+  # ------------ INPUT VALIDATION -------------
+  # Ensures that 'df' is a data frame
   if (!is.data.frame(df)) {
     stop("Fehler: 'df' muss ein Data-Frame sein ")
   }
   
-  # Neue Validierung mit extrahierten Rohvariablen
+  # Check if all base variables exist in the data frame
   basis_variablen <- extrahiere_basisvariablen(unabhVar_list)
   if (!all(basis_variablen %in% names(df))) {
     fehlende <- basis_variablen[!(basis_variablen %in% names(df))]
@@ -86,21 +86,13 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   }
   
   
-  #?berpr?fung der abh?ngigen Variable
+  # Check if dependent variable exists
   if (missing(abhVar) || !(abhVar %in% names(df))) {
     stop("Fehler: 'abhVar' fehlt oder existiert nicht im Data-Frame")
   }
+
   
-  #Überprüfung der unabhängiige Variable
-  # Prüfen, ob alle in Interaktion enthaltenen Basisvariablen existieren
-  #base_vars <- unique(unlist(strsplit(unabhVar_list, split = "[:*\\+\\^\\(\\)\\ ]")))
-  #base_vars <- base_vars[base_vars != ""]
-  #if (!all(base_vars %in% names(df))) {
-   # stop("Fehler: Eine oder mehrere Variablen, die in der Formel verwendet werden, existieren nicht im Data-Frame.")
-  #}
-  
-  
-  # Sicherstellen, dass abhVar numerisch ist
+  # Convert dependent variable to numeric if necessary
   if (!is.numeric(df[[abhVar]])) {
     warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", abhVar))
     df[[abhVar]] <- as.numeric(as.character(df[[abhVar]]))
@@ -109,7 +101,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     }
   }
   
-  # Sicherstellen, dass unabhVar numerisch ist
+   # Convert independent variables to numeric or factor
   for (var in basis_variablen) {
     if (!is.numeric(df[[var]]) && !is.factor(df[[var]])) {
       warning(sprintf("Hinweis: '%s' ist weder numerisch noch ein Faktor. Versuch automatische Umwandlung.", var))
@@ -120,74 +112,62 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     }
   }
   
-  # Falls Nutzer versehentlich eine Liste übergibt, in character-Vektor umwandeln
+  # Convert list to character vector if necessary
   if (is.list(unabhVar_list)) {
     unabhVar_list <- unlist(unabhVar_list)
   }
   
   
-  
+  # ------------ INITIALIZE RESULT LIST ------------
   result <- list()
   
-  # Modell und Kennwerte
+  
   result$multilineare_regression <- NA
   result$summary_multilineare_regression <- NA
   result$multilineare_regression_residuals <- NA
   
-  # Normalverteilung
+ 
   result$shapiro_test <- NA
   result$multilineare_regression_residuals_normalverteilung <- NA
   
-  # Homoskedastizität
+  
   result$breusch_pagan_test <- NA
   result$homoskedazitaet <- NA
   
-  # Korrelation
+  
   result$korrelationsmatrix <- NA
   result$hohe_korrelation_name <- NA
   result$plot_korrelationsmatrix <- NA
   
-  # Multikollinearität
+  
   result$multikollinearitaet <- NA
   result$problematische_vif_variablen <- NA_character_
   result$vif_warnung <- NA
   result$plot_vif <- NA
   vif_values <- NULL
   
-  # Residuenplots
+  
   result$plot_qq_resid <- NA
   result$plot_resid_vs_fitted <- NA
   result$plot_histogramm_residuen <- NA
   result$plot_scale_location <- NA
   
-  # Einflussdiagnostik
+  
   result$plot_influencePlot <- NA
   
-  # Interaktionsplots
+  
   result$plot_interaktion_list <- list()
   result$plot_interaktion <- NA
   result$plot_interactions_faceted <- NA
   
-  # Johnson-Neyman
+   
   result$plot_johnson_neyman_list <- list()
   
-  # Konfidenzintervall-Plot
   result$plot_konfint <- NA
   
   
   
-  
-  #Plots
-  result$plot_qq_resid <- NA
-  result$plot_resid_vs_fitted <- NA
-  result$plot_korrelationsmatrix <- NA
-  result$plot_histogramm_residuen <- NA
-  result$plot_scale_location <- NA
-  result$plot_vif
-  result$plot_influencePlot <- NA 
-  
-  
-  # ------------ REGRESSIONSMODELL AUFSTELLEN ------------
+  # ------------ FIT MULTIPLE LINEAR REGRESSION MODEL ------------
   formel <- as.formula(paste(abhVar, '~', paste(unabhVar_list, collapse = " + ")))
   
   multiple_regression <- lm(formel, data = df)
@@ -195,19 +175,19 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   result$summary_multilineare_regression <- summary(result$multilineare_regression)
   
   
-  # ------------ RESIDUENANALYSE - SHAPIRO-WILK ------------
+  # ------------ NORMALITY TEST OF RESIDUALS (SHAPIRO-WILK) ------------
   result$multilineare_regression_residuals <- multiple_regression$residuals
   shapiro_wilk_result <- shapiro.test(result$multilineare_regression_residuals)
   result$shapiro_test <- shapiro_wilk_result
   result$multilineare_regression_residuals_normalverteilung <- shapiro_wilk_result$p.value >= signifikanzniveau_alpha
   
   
-  # ------------ HOMOSKEDAZITÄT PRÜFEN ------------
+  # ------------ HOMOSCEDASTICITY TEST (BREUSCH-PAGAN) ------------
   bp_test <- lmtest::bptest(result$multilineare_regression)
   result$breusch_pagan_test <- bp_test
   result$homoskedazitaet <- bp_test$p.value >= signifikanzniveau_alpha
   
-  # ------------ KORRELATIONSMATRIX BESTIMMEN ------------
+  # ------------ CORRELATION MATRIX ------------
   reduced_data <- df[, basis_variablen]
   reduced_data <- Filter(function(x) is.numeric(x) && sd(x, na.rm = TRUE) > 0, reduced_data)
   
@@ -215,7 +195,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     korrelationsmatrix <- cor(as.data.frame(reduced_data), use = "pairwise.complete.obs")
     result$korrelationsmatrix <- korrelationsmatrix
     
-    # Hoch korrelierte Paare
+    # Extract strongly correlated variable pairs
     kor_pairs <- which(abs(korrelationsmatrix) >= 0.8 & abs(korrelationsmatrix) < 1, arr.ind = TRUE)
     kor_names <- apply(unique(t(apply(kor_pairs, 1, sort))), 1, function(i) {
       paste0(colnames(korrelationsmatrix)[i[1]], " & ", colnames(korrelationsmatrix)[i[2]])
@@ -232,7 +212,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  # ------------ TEST AUF MULTIKOLLINEARITÄT ------------
+  # ------------ MULTICOLLINEARITY TEST (VIF) ------------
   vif_values <- tryCatch({
     vif_temp <- car::vif(multiple_regression)
     if (length(vif_temp) > 0) vif_temp else NULL
@@ -245,7 +225,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   result$problematische_vif_variablen <- if (!is.null(vif_values)) names(vif_values[vif_values >= 5]) else NA_character_
   result$vif_warnung <- if (!is.null(vif_values)) any(vif_values >= 10) else FALSE
   
-  # ------------ VIF-PLOT ERSTELLEN ------------
+  # ------------ VIF-PLOT ------------
   if (!is.null(vif_values)) {
     if (is.matrix(vif_values)) {
       vif_df <- data.frame(variable = rownames(vif_values), VIF = as.numeric(vif_values[, 1]))
@@ -270,9 +250,9 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   }
   
   
-  # ------------ DESKRIPTIVE STATISTIK (PLOTS) ------------
+  # ------------ ADDITIONAL DIAGNOSTIC PLOTS ------------
   
-  #Wahrscheinlichlichkeitsnetz der Residuen - Q-Q-Plot
+  # QQ Plot of residuals
   resid_df <- data.frame(resid = multiple_regression$residuals)
   result$plot_qq_resid <- ggplot2::ggplot(resid_df, ggplot2::aes(sample = resid)) +
     ggplot2::stat_qq() +
@@ -284,7 +264,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  #Residuals vs Fitted
+  #Residuals vs Fitted plot
   plot_df <- data.frame(Fitted = multiple_regression$fitted.values, Residuals = multiple_regression$residuals)
   result$plot_resid_vs_fitted <- ggplot2::ggplot(plot_df, ggplot2::aes(x = Fitted, y = Residuals)) +
     ggplot2::geom_point() +
@@ -293,7 +273,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
                   x = "Fitted Values", y = "Residuen") +
     ggplot2::theme_minimal()
   
-  #Korrelationsmatrix
+  #correlation matrix
   if (!is.null(result$korrelationsmatrix) && !all(is.na(result$korrelationsmatrix))) {
     plot_km <- ggcorrplot::ggcorrplot(result$korrelationsmatrix, hc.order = TRUE, type = "lower", lab = TRUE)
     result$plot_korrelationsmatrix <- plot_km
@@ -302,7 +282,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   }
   
   
-  #Influence Plot (nur optional)
+  #Influence Plot
   result$plot_influencePlot <- function() {
     car::influencePlot(multiple_regression)
   }
@@ -335,7 +315,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     ggplot2::theme_minimal()
   
   
-  #Histogramm der Residuen mit der überlagerten Dichtefunktion und Bins-Berechnung mithilfe der 'Freedman-Diaconis-Regel'
+  # Histogram of residuals (Freedman-Diaconis binning)
   bin_width <- 2 * IQR(result$multilineare_regression_residuals, na.rm = TRUE)/length(result$multilineare_regression_residuals)^(1/3)
   bin_size <- ceiling((max(result$multilineare_regression_residuals, na.rm = TRUE) - min(result$multilineare_regression_residuals, na.rm = TRUE))/bin_width)
   
@@ -358,10 +338,9 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     ggplot2::theme_minimal()
   
   
-  #Interaktionsplot - mehrere hintereinander 
+  #Ineraction plot 
   interaktionen <- grep("\\*", unabhVar_list, value = TRUE) #RegEx - Trennung durch *
   
-  # Leere Liste für die Plots
   interaktion_plots <- list()
   
   for (term in interaktionen) {
@@ -379,21 +358,19 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
         ggplot2::labs(title = paste("Interaktion:", term), x = x_var, y = abhVar) +
         ggplot2::theme_minimal()
       
-      # Speichern in Liste
+      
       interaktion_plots[[term]] <- p
     }
   }
-  # Ergebnis ist eine Liste aus Plots
+  
   result$plot_interaktion_list <- interaktion_plots
   
   
-  # Interaktionsplots – automatisch erzeugen, je nach Anzahl
   interaktionen <- grep("\\*", unabhVar_list, value = TRUE)
   mindestens_ein_faktor <- any(sapply(unlist(strsplit(interaktionen, "\\*")), function(var) is.factor(df[[var]])))
   
   
   if (length(interaktionen) == 1 && mindestens_ein_faktor) {
-    # ---- EINZELNER Interaktionsterm: Ein einfacher Plot ----
     vars_plot <- unlist(strsplit(interaktionen[1], "\\*"))
     if (length(vars_plot) == 2) {
       var1 <- vars_plot[1]
@@ -421,7 +398,6 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
     }
     
   } else if (length(interaktionen) > 1 && mindestens_ein_faktor) {
-    # ---- MEHRERE Interaktionsterme: Facettenplot ----
     plot_data <- data.frame()
     
     for (term in interaktionen) {
@@ -445,7 +421,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  #Johnson-Neyman-Integrationsplot für stetige Interaktionen
+  #Johnson-Neyman-plot
   interaktionen <- grep("\\*", unabhVar_list, value = TRUE)
   result$plot_johnson_neyman_list <- list()
   
@@ -469,7 +445,7 @@ aurelio_multilineareregression_with_interactions <- function(df,unabhVar_list,ab
   
   
   
-  #Konfidenzintervallplot
+  #CI-plot
   confint_df <- as.data.frame(confint(multiple_regression, level = 1 - signifikanzniveau_alpha))
   confint_df$Estimate <- coef(multiple_regression)
   confint_df$Variable <- rownames(confint_df)
