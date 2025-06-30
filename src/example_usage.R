@@ -1,96 +1,100 @@
+# ========== EXAMPLE USAGE OF THE R FUNCTIONS ==========
 
-# ========== BEISPIEL-VERWENDUNG DER R-FUNKTIONEN ==========
-
-# Diese Datei enthält vollständige Tests für alle R-Funktionen im Repository.
-# Die benötigten CSV-Dateien liegen im Verzeichnis: src/csv-data/
+# This file contains complete test cases for all R functions in the repository.
+# The required CSV files are located in the directory: src/csv-data/
 
 # ------------ ANALYSIS OF VARIANCE (ANOVA) ------------
 
 source("src/own_ANOVA.R")
 
-# Fall 1: Iris-Datensatz (Games-Howell)
+# Case 1: Iris dataset (Games-Howell expected)
 result <- aurelio_einfach_anova(iris, "Sepal.Length", "Species")
 print(result$plot)
 
-# Fall 2: Tukey-Test mit simulierten Daten
+# Case 2: Tukey HSD test with simulated data
 set.seed(1)
-gruppe <- rep(c("A", "B", "C"), each = 30)
-wert <- c(rnorm(30, 10, 2), rnorm(30, 12, 2), rnorm(30, 14, 2))
-df_tukey <- data.frame(gruppe, wert)
-res_tukey <- aurelio_einfach_anova(df_tukey, "wert", "gruppe")
+group <- rep(c("A", "B", "C"), each = 30)
+value <- c(rnorm(30, 10, 2), rnorm(30, 12, 2), rnorm(30, 14, 2))
+df_tukey <- data.frame(group, value)
+res_tukey <- aurelio_einfach_anova(df_tukey, "value", "group")
 
-# Fall 3: Kruskal-Wallis-Test mit schiefen Verteilungen
+# Case 3: Kruskal-Wallis test with skewed distributions
 set.seed(2)
-wert <- c(rexp(30, 1/10), rexp(30, 1/12), rexp(30, 1/14))
-df_kruskal <- data.frame(gruppe, wert)
-res_kruskal <- aurelio_einfach_anova(df_kruskal, "wert", "gruppe")
+value <- c(rexp(30, 1/10), rexp(30, 1/12), rexp(30, 1/14))
+df_kruskal <- data.frame(group, value)
+res_kruskal <- aurelio_einfach_anova(df_kruskal, "value", "group")
 
-# Fall 4: Games-Howell mit unterschiedlicher Varianz
+# Case 4: Games-Howell with unequal variances
 set.seed(3)
-wert <- c(rnorm(30, 10, 1), rnorm(30, 12, 5), rnorm(30, 14, 1))
-df_games <- data.frame(gruppe, wert)
-res_games <- aurelio_einfach_anova(df_games, "wert", "gruppe")
+value <- c(rnorm(30, 10, 1), rnorm(30, 12, 5), rnorm(30, 14, 1))
+df_games <- data.frame(group, value)
+res_games <- aurelio_einfach_anova(df_games, "value", "group")
 
-# Fall 5: Echte CSV-Daten
+# Case 5: Real CSV data
 abortion_data_anova <- read.csv2("src/csv-data/abortion_data.csv")
 abortion_anova <- aurelio_einfach_anova(abortion_data_anova, "Abortion", "Relig_Group")
 
-# ------------ EINFACHE LINEARE REGRESSION ------------
+# ------------ SIMPLE LINEAR REGRESSION ------------
 
 source("src/own_Regression.R")
 
 abortion_data <- read.csv2("src/csv-data/abortion_data.csv")
 regression_abortion <- aurelio_lineareregression(abortion_data, "Religion", "Abortion")
 
-# ------------ MULTIPLE LINEARE REGRESSION ------------
+# ------------ MULTIPLE LINEAR REGRESSION ------------
 
 source("src/own_multipleregression.R")
 
 election_data <- read.csv2("src/csv-data/election_data.csv")
-multiplereression_election_result <- aurelio_multilineareregression(
+multiple_result <- aurelio_multilineareregression(
   election_data, list("Growth", "Inflation"), "Vote"
 )
 
-# ------------ DUMMY-VARIABLEN ------------
+# ------------ DUMMY VARIABLE CREATION ------------
 
 source("src/own_dummycreator.R")
 
-einkommensdaten <- read.csv2("src/csv-data/einkommensdaten.csv")
-dummy_var <- aurelio_dummy_variable_creator(einkommensdaten, c("Ausbildung"), list(1, 2, 3))
+income_data <- read.csv2("src/csv-data/einkommensdaten.csv")
+dummy_result <- aurelio_dummy_variable_creator(income_data, c("Ausbildung"), list(1, 2, 3))
 
-# ------------ MULTIPLE REGRESSION MIT INTERAKTION ------------
+# ------------ MULTIPLE REGRESSION WITH INTERACTIONS ------------
 
 source("src/own_multipleregression_interactions.R")
 
-einstellungsproblem <- read.csv2("src/csv-data/einstellungsproblem.csv")
-multipleregression_einstellungsproblem_with_interactions <- aurelio_multilineareregression_with_interactions(
-  einstellungsproblem, list("Test*Rasse"), "Arbeitsleistung"
+# Example 1: Single interaction term
+attitudes_data <- read.csv2("src/csv-data/einstellungsproblem.csv")
+result_interaction_1 <- aurelio_multilineareregression_with_interactions(
+  attitudes_data, list("Test*Rasse"), "Arbeitsleistung"
 )
 
-election_data <- read.csv2("src/csv-data/election_data.csv")
-multiplereression_election_with_interactions <- aurelio_multilineareregression_with_interactions(
+# Example 2: Interaction using colon notation
+result_interaction_2 <- aurelio_multilineareregression_with_interactions(
   election_data, list("Growth:Incumbent", "Inflation"), "Vote"
 )
 
-multiplereression_election_with_interactions2 <- aurelio_multilineareregression_with_interactions(
+# Example 3: Full interaction with asterisk
+result_interaction_3 <- aurelio_multilineareregression_with_interactions(
   election_data, list("Growth*Incumbent", "Inflation"), "Vote"
 )
 
-# Beispiel mit mtcars
+# Example 4: mtcars with categorical predictor
 mtcars$gear <- factor(mtcars$gear)
-multiwithinter <- aurelio_multilineareregression_with_interactions(mtcars, "gear", "mpg")
+multi_gear <- aurelio_multilineareregression_with_interactions(mtcars, "gear", "mpg")
 
+# Example 5: Interaction of two factors
 mtcars$am <- factor(mtcars$am)
-mtcars$vd <- factor(mtcars$vs)
-mixed <- aurelio_multilineareregression_with_interactions(mtcars, list("am*vs", "hp"), "mpg")
+mtcars$vs <- factor(mtcars$vs)
+multi_factors <- aurelio_multilineareregression_with_interactions(mtcars, list("am*vs", "hp"), "mpg")
 
-# ------------ KOMPLEXES BEISPIEL: 102 EINKOMMENSDATEN ------------
+# ------------ COMPLEX EXAMPLE: 102 OBSERVATIONS ------------
 
-einkommensdaten <- read.csv2("src/csv-data/einkommensdaten.csv")
-einkommensdaten$Management <- factor(einkommensdaten$Management)
-einkommensdaten$Ausbildung <- factor(einkommensdaten$Ausbildung)
+income_data <- read.csv2("src/csv-data/einkommensdaten.csv")
+income_data$Management <- factor(income_data$Management)
+income_data$Ausbildung <- factor(income_data$Ausbildung)
 
-df_neu <- einkommensdaten[-33,]
-mixed2 <- aurelio_multilineareregression_with_interactions(
-  einkommensdaten, list("Management*Ausbildung", "Erfahrung"), "Einkommen"
+# Optional: remove outlier row 33
+df_cleaned <- income_data[-33, ]
+
+complex_result <- aurelio_multilineareregression_with_interactions(
+  income_data, list("Management*Ausbildung", "Erfahrung"), "Einkommen"
 )
