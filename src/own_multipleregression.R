@@ -4,10 +4,10 @@
 #' diagnostic plots to assess model quality. These include residual analysis,
 #' checks for homoscedasticity, multicollinearity, and correlation structure among predictors.
 #'
-#' @param df                      A data frame containing the input data.
-#' @param unabhVar_list           A character vector with the names of the independent variables.
-#' @param abhVar                  A character string with the name of the dependent (target) variable.
-#' @param signifikanzniveau_alpha Significance level for hypothesis tests (default: 0.05).
+#' @param df                          A data frame containing the input data.
+#' @param unabhVar_list               A character vector with the names of the independent variables.
+#' @param abhVar                      A character string with the name of the dependent (target) variable.
+#' @param signifikanzniveau_alpha     Significance level for hypothesis tests (default: 0.05).
 #'
 #' @return A list with the following elements:
 #' \item{multilineare_regression}{The fitted linear regression model (object of class \code{lm}).}
@@ -46,30 +46,30 @@
 
 aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzniveau_alpha = 0.05) {
   
-  # ------------ LOKALES LADEN DER PAKETE ------------
+  # ------------ LOAD REQUIRED PACKAGES LOCALLY ------------
   requireNamespace("ggplot2")
   requireNamespace("ggcorrplot")
   requireNamespace("car")
   #requireNamespace("")
   
   
-  # ------------ EINGABE-TEST -------------
-  #Überprüfung, ob Data-Frame
+  # ------------ INPUT VALIDATION -------------
+  # Check if df is a data frame
   if (!is.data.frame(df)) {
     stop("Fehler: 'df' muss ein Data-Frame sein ")
   }
   
-  #?berpr?fung der abh?ngigen Variable
+  # Check if dependent variable exists
   if (missing(abhVar) || !(abhVar %in% names(df))) {
     stop("Fehler: 'abhVar' fehlt oder existiert nicht im Data-Frame")
   }
   
-  #Überprüfung der unabhängiige Variable
+  # Check if all independent variables exist
   if (missing(unabhVar_list) || !all(unabhVar_list %in% names(df))) {
     stop("Fehler: Eine oder mehrere unabhängige Variablen fehlen oder existieren nicht im Data-Frame")
   }
   
-  # Sicherstellen, dass abhVar numerisch ist
+  # Ensure the dependent variable is numeric
   if (!is.numeric(df[[abhVar]])) {
     warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", abhVar))
     df[[abhVar]] <- as.numeric(as.character(df[[abhVar]]))
@@ -78,7 +78,7 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
     }
   }
   
-  # Sicherstellen, dass unabhVar numerisch ist
+  # Ensure all independent variables are numeric
   for (var in unabhVar_list) {
     if (!is.numeric(df[[var]])) {
       warning(sprintf("Hinweis: '%s' ist nicht numerisch. Versuch automatische Umwandlung.", var))
@@ -89,13 +89,14 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
     }
   }
   
-  # Falls Nutzer versehentlich eine Liste übergibt, in character-Vektor umwandeln
+  # Convert list to character vector if needed
   if (is.list(unabhVar_list)) {
     unabhVar_list <- unlist(unabhVar_list)
   }
   
   
-  
+
+  # ------------ CREATE RESULT LIST ------------
   result <- list()
   result$multilineare_regression <- NA
   result$summary_multilineare_regression <- NA
@@ -127,7 +128,7 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
   result$plot_influencePlot <- NA 
   
   
-  # ------------ REGRESSIONSMODELL AUFSTELLEN ------------
+  # ------------ FIT MULTIPLE LINEAR REGRESSION MODEL ------------
   formel <- as.formula(paste(abhVar, '~', paste(unabhVar_list, collapse = " + ")))
   
   multiple_regression <- lm(formel, data = df)
@@ -135,25 +136,25 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
   result$summary_multilineare_regression <- summary(result$multilineare_regression)
   
   
-  # ------------ RESIDUENANALYSE - SHAPIRO-WILK ------------
+  # ------------ TEST FOR NORMALITY OF RESIDUALS (SHAPIRO-WILK) ------------
   result$multilineare_regression_residuals <- multiple_regression$residuals
   shapiro_wilk_result <- shapiro.test(result$multilineare_regression_residuals)
   result$shapiro_test <- shapiro_wilk_result
   result$multilineare_regression_residuals_normalverteilung <- shapiro_wilk_result$p.value >= signifikanzniveau_alpha
   
   
-  # ------------ HOMOSKEDAZITÄT PRÜFEN ------------
+  # ------------ CHECK FOR HOMOSCEDASTICITY (Breusch-Pagan Test)------------
   bp_test <- lmtest::bptest(result$multilineare_regression)
   result$breusch_pagan_test <- bp_test
   result$homoskedazitaet <- bp_test$p.value >= signifikanzniveau_alpha
   
-  # ------------ KORRELATIONSMATRIX BESTIMMEN ------------
+  # ------------ COMPUTE CORRELATION MATRIX AMONG INDEPENDENT VARIABLES ------------
   reduced_data <- df[, unabhVar_list]
   reduced_data <- reduced_data[sapply(reduced_data, function(x) is.numeric(x) && sd(x, na.rm = TRUE) > 0)]
   korrelationsmatrix <- cor(reduced_data, use = "pairwise.complete.obs")
   result$korrelationsmatrix <- korrelationsmatrix
   
-  
+  # ------------ DETECT STRONGLY CORRELATED PAIRS (|r| >= 0.8) ------------
   hohe_korrelationspaare <- which(abs(korrelationsmatrix) >= 0.8 & abs(korrelationsmatrix) < 1, arr.ind = TRUE)
   hohe_korrelation_liste <- unique(t(apply(hohe_korrelationspaare, 1, sort)))
   hohe_korrelation_name <- apply(hohe_korrelation_liste, 1, function(idx) {
@@ -164,7 +165,7 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
   
   
   
-  # ------------ TEST AUF MULTIKOLLINEARITÄT ------------
+  # ------------ MULTICOLLINEARITY CHECK (VIF) ------------
   vif_values <- car::vif(multiple_regression)
   
   result$multikollinearitaet <- vif_values
@@ -172,9 +173,9 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
   result$vif_warnung <- any(vif_values >= 10)
   
   
-  # ------------ DESKRIPTIVE STATISTIK (PLOTS) ------------
+  # ------------ DESCRIPTIVE DIAGNOSTIC PLOTS ------------
   
-  #Wahrscheinlichlichkeitsnetz der Residuen - Q-Q-Plot
+  # Q-Q Plot for residuals
   resid_df <- data.frame(resid = multiple_regression$residuals)
   result$plot_qq_resid <- ggplot2::ggplot(resid_df, ggplot2::aes(sample = resid)) +
     ggplot2::stat_qq() +
@@ -195,18 +196,18 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
                   x = "Fitted Values", y = "Residuen") +
     ggplot2::theme_minimal()
 
-  #Korrelationsmatrix
+  # Correlation Matrix Plot
   plot_km <- ggcorrplot::ggcorrplot(korrelationsmatrix, hc.order = TRUE, type = "lower", lab = TRUE)
   result$plot_korrelationsmatrix <- plot_km
   
-  #Influence Plot (nur optional)
+  # Cook's Distance Influence Plot
   result$plot_influencePlot <- function() {
     car::influencePlot(multiple_regression)
   }
   
   
   
-  #VIF
+  #VIF Barplot
   vif_values <- car::vif(multiple_regression)
   vif_df <- data.frame(variable = names(vif_values), VIF = as.numeric(vif_values))
   
@@ -220,7 +221,7 @@ aurelio_multilineareregression <- function(df,unabhVar_list,abhVar, signifikanzn
     ggplot2::theme_minimal()
   
   
-  #Histogramm der Residuen mit der überlagerten Dichtefunktion und Bins-Berechnung mithilfe der 'Freedman-Diaconis-Regel'
+  #Histogram of residuals (Freedman-Diaconis binning)
 
   bin_width <- 2 * IQR(result$multilineare_regression_residuals, na.rm = TRUE)/length(result$multilineare_regression_residuals)^(1/3)
   bin_size <- ceiling((max(result$multilineare_regression_residuals, na.rm = TRUE) - min(result$multilineare_regression_residuals, na.rm = TRUE))/bin_width)
